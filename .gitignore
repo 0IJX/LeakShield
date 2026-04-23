@@ -1,3 +1,43 @@
 .venv/
-__pycache__/
 .pytest_cache/
+
+# Python caches and test artifacts
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Build and packaging artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.egg
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+
+# IDE/editor
+.idea/
+.vscode/
+*.code-workspace
+
+# OS and temp files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.temp
+
+# Python bytecode
+__pycache__/
+*.pyc
