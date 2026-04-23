@@ -7,12 +7,16 @@ from dataclasses import dataclass, field
 from leakshield.filtering.allowlist import Allowlist
 from leakshield.models import OutputFormat, Severity
 
+TEST_PATH_MODES = {"lower_confidence", "ignore", "off"}
+
 
 @dataclass(slots=True)
 class ScanConfig:
     max_file_size_bytes: int = 1_000_000
     include_globs: list[str] = field(default_factory=list)
     exclude_globs: list[str] = field(default_factory=list)
+    test_path_mode: str = "lower_confidence"
+    test_path_confidence_multiplier: float = 0.75
 
 
 @dataclass(slots=True)
@@ -63,6 +67,21 @@ class LeakshieldConfig:
         min_confidence = float(threshold_data.get("min_confidence", 0.45))
         if min_confidence < 0.0 or min_confidence > 1.0:
             raise ValueError("thresholds.min_confidence must be between 0 and 1")
+        test_path_mode = str(scan_data.get("test_path_mode", "lower_confidence")).strip().lower()
+        if test_path_mode not in TEST_PATH_MODES:
+            raise ValueError(
+                "scan.test_path_mode must be one of: lower_confidence, ignore, off"
+            )
+        test_path_confidence_multiplier = float(
+            scan_data.get("test_path_confidence_multiplier", 0.75)
+        )
+        if (
+            test_path_confidence_multiplier <= 0.0
+            or test_path_confidence_multiplier > 1.0
+        ):
+            raise ValueError(
+                "scan.test_path_confidence_multiplier must be > 0 and <= 1"
+            )
 
         return cls(
             version=int(payload.get("version", 1)),
@@ -70,6 +89,8 @@ class LeakshieldConfig:
                 max_file_size_bytes=int(scan_data.get("max_file_size_bytes", 1_000_000)),
                 include_globs=list(scan_data.get("include_globs", [])),
                 exclude_globs=list(scan_data.get("exclude_globs", [])),
+                test_path_mode=test_path_mode,
+                test_path_confidence_multiplier=test_path_confidence_multiplier,
             ),
             detectors=DetectorConfig(
                 regex_enabled=bool(detector_data.get("regex_enabled", True)),

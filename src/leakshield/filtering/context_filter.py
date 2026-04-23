@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from leakshield.filtering.allowlist import Allowlist, is_allowlisted
 from leakshield.filtering.placeholders import is_placeholder
 from leakshield.models import Candidate
@@ -34,6 +36,19 @@ NOISY_FIXTURE_TYPES = {
     "db_connection",
 }
 
+TEST_PATH_SEGMENTS = {
+    "tests",
+    "fixtures",
+    "samples",
+    "sample",
+    "testdata",
+}
+
+TEST_FILE_PATTERNS = (
+    re.compile(r"^test_.*\.py$"),
+    re.compile(r"^.*_test\.py$"),
+)
+
 
 def _is_low_signal_env_value(value: str) -> bool:
     normalized = value.strip().strip("\"'`").lower()
@@ -52,6 +67,17 @@ def _is_noisy_fixture_path(path: str) -> bool:
     normalized = path.replace("\\", "/").lower()
     segments = {segment for segment in normalized.split("/") if segment}
     return not NOISY_FIXTURE_SEGMENTS.isdisjoint(segments)
+
+
+def is_test_related_path(path: str) -> bool:
+    normalized = path.replace("\\", "/").lower()
+    segments = [segment for segment in normalized.split("/") if segment]
+    if not TEST_PATH_SEGMENTS.isdisjoint(segments):
+        return True
+    if not segments:
+        return False
+    filename = segments[-1]
+    return any(pattern.match(filename) for pattern in TEST_FILE_PATTERNS)
 
 
 def should_filter_candidate(

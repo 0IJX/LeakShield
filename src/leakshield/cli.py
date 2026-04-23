@@ -53,7 +53,11 @@ def scan_command(
     if effective_format == OutputFormat.JSON:
         typer.echo(render_json(result))
     else:
-        render_cli(result, console=Console(no_color=not runtime_config.output.color))
+        render_cli(
+            result,
+            console=Console(no_color=not runtime_config.output.color),
+            verbosity=runtime_config.output.verbosity,
+        )
 
     raise typer.Exit(scan_exit_code(result.findings, runtime_config.thresholds.block_severity))
 

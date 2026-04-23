@@ -94,6 +94,8 @@ class ScanService:
             entropy_threshold=self.config.thresholds.entropy_threshold,
             min_confidence=self.config.thresholds.min_confidence,
             enable_entropy=self.config.detectors.entropy_enabled,
+            test_path_mode=self.config.scan.test_path_mode,
+            test_path_confidence_multiplier=self.config.scan.test_path_confidence_multiplier,
         )
         findings: list[Finding] = []
         scanned_files = 0

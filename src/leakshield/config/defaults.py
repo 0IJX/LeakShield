@@ -15,6 +15,8 @@ DEFAULT_CONFIG: dict = {
             "**/testdata/**",
             "**/__snapshots__/**",
         ],
+        "test_path_mode": "lower_confidence",
+        "test_path_confidence_multiplier": 0.75,
     },
     "detectors": {
         "regex_enabled": True,

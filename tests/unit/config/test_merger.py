@@ -17,3 +17,10 @@ def test_default_exclude_globs_include_fixture_noise_paths() -> None:
     excludes = DEFAULT_CONFIG["scan"]["exclude_globs"]
     assert "**/fixtures/**" in excludes
     assert "**/samples/**" in excludes
+
+
+def test_default_scan_includes_test_path_noise_controls() -> None:
+    from leakshield.config.defaults import DEFAULT_CONFIG
+
+    assert DEFAULT_CONFIG["scan"]["test_path_mode"] == "lower_confidence"
+    assert DEFAULT_CONFIG["scan"]["test_path_confidence_multiplier"] == 0.75

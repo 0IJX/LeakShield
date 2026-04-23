@@ -10,7 +10,7 @@ from leakshield.classification.severity import map_severity
 from leakshield.detectors.entropy import shannon_entropy
 from leakshield.detectors.registry import DetectorRegistry
 from leakshield.filtering.allowlist import Allowlist
-from leakshield.filtering.context_filter import should_filter_candidate
+from leakshield.filtering.context_filter import is_test_related_path, should_filter_candidate
 from leakshield.models import Finding, ScanTarget
 from leakshield.reporting.masking import mask_secret
 
@@ -21,11 +21,17 @@ class PipelineOptions:
     entropy_threshold: float
     min_confidence: float
     enable_entropy: bool = True
+    test_path_mode: str = "lower_confidence"
+    test_path_confidence_multiplier: float = 0.75
 
 
 def _finding_id(path: str, line: int, detector_id: str, masked_value: str) -> str:
     raw = f"{path}:{line}:{detector_id}:{masked_value}".encode("utf-8")
     return hashlib.sha1(raw).hexdigest()[:12]
+
+
+def _adjust_confidence_for_test_path(confidence: float, multiplier: float) -> float:
+    return round(max(0.0, min(1.0, confidence * multiplier)), 3)
 
 
 def run_pipeline(
@@ -44,6 +50,14 @@ def run_pipeline(
         if should_filter_candidate(candidate, ignore_path=ignore_path, allowlist=options.allowlist):
             continue
         confidence = score_confidence(candidate, entropy_threshold=options.entropy_threshold)
+        if is_test_related_path(candidate.path):
+            if options.test_path_mode == "ignore":
+                continue
+            if options.test_path_mode == "lower_confidence":
+                confidence = _adjust_confidence_for_test_path(
+                    confidence,
+                    options.test_path_confidence_multiplier,
+                )
         if confidence < options.min_confidence:
             continue
         severity = map_severity(candidate.secret_type, confidence)

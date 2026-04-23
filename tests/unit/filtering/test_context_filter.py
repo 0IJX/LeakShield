@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from leakshield.filtering.allowlist import Allowlist
-from leakshield.filtering.context_filter import should_filter_candidate
+from leakshield.filtering.context_filter import is_test_related_path, should_filter_candidate
 from leakshield.models import Candidate
 
 
@@ -38,3 +38,11 @@ def test_fixture_paths_filter_noisy_types() -> None:
         context_line="SECRET=verylikelyplaceholder",
     )
     assert should_filter_candidate(candidate, ignore_path=False, allowlist=Allowlist()) is True
+
+
+def test_test_related_path_detection() -> None:
+    assert is_test_related_path("tests/unit/test_scan.py") is True
+    assert is_test_related_path("src/auth_test.py") is True
+    assert is_test_related_path("src/test_auth.py") is True
+    assert is_test_related_path("docs/fixtures/token.txt") is True
+    assert is_test_related_path("src/leakshield/services/scan_service.py") is False
