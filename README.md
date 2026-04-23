@@ -1,106 +1,134 @@
 # LeakShield
 
-LeakShield is a local-first CLI that detects potential secrets and blocks risky commits before they enter Git history.
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Status: Active](https://img.shields.io/badge/status-active-success)
 
-## Why LeakShield
+**Stop secrets before they ever reach Git history.**
 
-- Prevents secret leaks before commit, not after incident response.
-- Runs fully local-first: no source code leaves your machine.
-- Uses layered detection (regex + entropy + contextual filtering) to improve signal quality.
-- Produces masked, actionable output suitable for both humans and automation.
+LeakShield is a local-first CLI that detects sensitive values in code and blocks risky changes before they are committed.  
+It exists to prevent avoidable incidents: leaked credentials, forced key rotation, and cleanup work after secrets land in Git.
 
-## Features
+## Why LeakShield? 🔍
 
-- Full repository scan: `leakshield scan`
-- Staged-only scan: `leakshield scan --staged`
-- Pre-commit hook installer: `leakshield install-hook`
-- Environment diagnostics: `leakshield doctor`
-- Output formats: Rich CLI table or JSON (`--format json`)
-- CI-friendly JSON contract with deterministic ordering and explicit `blocked`/`exit_code`
-- Ignore controls:
-  - `.gitignore` (respected during discovery)
-  - `.leakshieldignore` (LeakShield-specific path exclusions)
-  - `allowlist` entries via `leakshield.yml`
+- Prevent leaks before commit, not after exposure.
+- Local-first by default: no source code leaves your machine.
+- Smart detection pipeline: regex + entropy + context filtering.
+- Clean, masked output designed for real developer workflows.
+- Built-in Git hook integration for staged-commit protection.
 
-## Installation
+## Quick Demo ⚡
+
+```text
+$ leakshield scan --staged
+
+[CRITICAL] openai_api_key detected
+File: app.py:12
+Value: sk-****cdef
+
+❌ Commit blocked
+```
+
+When run through the installed pre-commit hook, a blocking result prevents the commit from being recorded.
+
+## Example Output 🧾
+
+```text
+LeakShield Scan Summary
+Mode: staged
+Scanned files: 2
+Findings: 2
+Critical: 1 | High: 1 | Medium: 0 | Low: 0
+Blocked: yes
+Duration: 63 ms
+Status: BLOCKING ISSUES DETECTED
+
+Potential Secret Findings (grouped by file)
+File        Line  Severity  Type            Confidence  Masked Value
+app/.env    12    critical  aws_access_key  0.95        AKIA************12
+src/app.py  44    high      github_token    0.90        ghp_**************************9x
+```
+
+All findings are masked in both CLI and JSON output.
+
+## Use Cases 🛠️
+
+- Prevent accidental API key/token leaks during everyday development.
+- Secure repositories before publishing open-source code.
+- Enforce safe commit behavior across team workflows.
+- Run CI checks with machine-readable JSON output.
+
+## Features ✅
+
+- Scan modes:
+  - Full scan: `leakshield scan`
+  - Staged scan: `leakshield scan --staged`
+- CLI commands:
+  - `leakshield scan`
+  - `leakshield install-hook`
+  - `leakshield doctor`
+- JSON output for automation: `--format json`
+- Config and ignore support:
+  - `leakshield.yml`
+  - `.leakshieldignore`
+  - `.gitignore`-aware discovery
+
+## Installation 📦
 
 ### Requirements
 
 - Python 3.12+
-- Git (for staged scan and hook workflows)
+- Git
 
-### Local development install
+### Install from source
+
+```bash
+git clone https://github.com/0IJX/LeakShield.git
+cd LeakShield
+pip install -e .
+```
+
+### Local Development Install
 
 ```bash
 python -m venv .venv
 # Windows
 .venv\Scripts\activate
 # macOS/Linux
-# source .venv/bin/activate
+source .venv/bin/activate
 
 pip install -e .
 ```
 
-## Quick Start
+## Usage 🚀
 
-### 1) Verify environment
+### Health Check
 
 ```bash
 leakshield doctor
 ```
 
-### 2) Scan the full repository
+### Scanning
 
 ```bash
 leakshield scan
-```
-
-### 3) Scan only staged changes
-
-```bash
 leakshield scan --staged
+leakshield scan --config ./leakshield.yml
 ```
 
-### 4) Install pre-commit protection
+### Git Hook Protection
 
 ```bash
 leakshield install-hook
 ```
 
-## Usage Examples
-
-### JSON output for automation
+### Automation / CI
 
 ```bash
 leakshield scan --staged --format json
 ```
 
-### Use a custom config file
-
-```bash
-leakshield scan --config ./leakshield.yml
-```
-
-## Sample Output (Masked)
-
-```text
-LeakShield Scan Summary
-Mode: staged
-Scanned files: 2
-Findings: 1
-Critical: 1 | High: 0 | Medium: 0 | Low: 0
-Blocked: yes
-Duration: 42 ms
-Status: BLOCKING ISSUES DETECTED
-
-Potential Secret Findings (grouped by file)
-File      Line  Severity  Type            Confidence  Masked Value
-app/.env  12    critical  aws_access_key  0.95        AKIA************12
-```
-
-LeakShield never prints full secret values in CLI or JSON output.
-
-### JSON output shape (for CI)
+## JSON Output (CI) 🤖
 
 ```json
 {
@@ -109,14 +137,30 @@ LeakShield never prints full secret values in CLI or JSON output.
   "mode": "staged",
   "blocked": true,
   "exit_code": 2,
-  "summary": { "...": "..." },
-  "findings": [ { "...": "..." } ]
+  "summary": {
+    "scanned_files": 2,
+    "findings_total": 1,
+    "critical": 1,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "duration_ms": 41
+  },
+  "findings": [
+    {
+      "type": "openai_api_key",
+      "severity": "critical",
+      "path": "app.py",
+      "line": 12,
+      "masked_value": "sk-****cdef"
+    }
+  ]
 }
 ```
 
-## Configuration
+## Configuration ⚙️
 
-Default config file: `leakshield.yml`
+Default file: `leakshield.yml`
 
 ```yaml
 version: 1
@@ -130,65 +174,62 @@ allowlist:
   paths: []
 ```
 
-Precedence order:
+Configuration precedence:
 1. Built-in defaults
 2. `leakshield.yml`
 3. CLI flags
 
-## Ignore Rules
+## Ignore Rules 🧹
 
-- `.gitignore` excludes files from discovery.
-- `.leakshieldignore` adds LeakShield-specific path patterns.
-- Default config also excludes common noisy fixture/sample paths:
-  - `**/fixtures/**`
-  - `**/samples/**`
-  - `**/sample/**`
-  - `**/testdata/**`
-  - `**/__snapshots__/**`
+- `.gitignore` is respected during file discovery.
+- `.leakshieldignore` supports LeakShield-specific exclusions.
+- Default config excludes common noisy paths such as `fixtures`, `samples`, and `testdata`.
 
-Example `.leakshieldignore`:
+Example:
 
 ```text
 tests/fixtures/*
 docs/examples/*
 ```
 
-## Architecture Snapshot
+## Architecture Overview 🧱
 
-LeakShield follows a layered design:
+LeakShield uses a layered flow:
 
 `CLI -> Services -> Detection Pipeline -> Reporting -> Exit Policy`
 
-Core modules:
+Module breakdown:
 - `detectors`: regex and entropy candidate generation
-- `filtering`: placeholder, allowlist, context suppression
+- `filtering`: placeholder/context/allowlist suppression
 - `classification`: severity and confidence scoring
-- `discovery` / `git`: full and staged target enumeration
-- `reporting`: masking, CLI/JSON renderers, block policy
-- `config`: schema, loading, merge precedence
+- `discovery` + `git`: full and staged file collection
+- `reporting`: masked CLI/JSON output and blocking policy
+- `config`: schema, load, and merge precedence
 
-## Security Guarantees
+## Security Guarantees 🔐
 
-- Local-first runtime; no outbound network calls in scan flow.
-- In-memory candidate processing.
-- Masked output only, never full secret values.
-- Designed to fail closed on blocking severity thresholds.
+- Local-first runtime (no outbound scanning calls).
+- Masked output only; raw secret values are not printed.
+- In-memory processing with fail-closed blocking by severity threshold.
 
-## Development
-
-Run tests:
+## Development 🧪
 
 ```bash
 pytest
 ```
 
-Run a targeted staged scan test:
+Targeted test example:
 
 ```bash
 pytest tests/integration/scan/test_staged_scan.py
 ```
 
-## Roadmap Direction
+## Roadmap Direction 🛣️
 
-LeakShield is free as a local CLI.
-Future direction: paid team dashboard, CI integration, and enterprise security controls.
+LeakShield remains a free local CLI.  
+Future direction: team workflows, CI integrations, and enterprise controls.
+
+## Documentation 📚
+
+- [Product Spec](docs/PRODUCT_SPEC.md)
+- [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
