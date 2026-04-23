@@ -1,0 +1,24 @@
+version: 1
+scan:
+  max_file_size_bytes: 1000000
+  include_globs: []
+  exclude_globs: []
+detectors:
+  regex_enabled: true
+  entropy_enabled: true
+thresholds:
+  min_confidence: 0.45
+  entropy_threshold: 3.5
+  block_severity: critical
+allowlist:
+  values: []
+  patterns: []
+  paths: []
+output:
+  format: cli
+  color: true
+  verbosity: normal
+hook:
+  enabled: true
+  fail_severity: critical
+
