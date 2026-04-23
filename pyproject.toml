@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "leakshield"
+version = "0.1.0"
+description = "Local-first CLI to detect and block secret leaks before commit."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "typer>=0.24.2",
+  "rich>=15.0.0",
+  "PyYAML>=6.0.3",
+]
+
+[project.scripts]
+leakshield = "leakshield.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
