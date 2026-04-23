@@ -1,0 +1,8 @@
+OPENAI=sk-proj-abcdefghijklmnopqrstuvwxyz123456
+AWS=AKIA1234567890ABCD12
+GITHUB=ghp_abcdefghijklmnopqrstuvwxyz1234
+JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFsaWNlIiwiaWF0IjoxNTE2MjM5MDIyfQ.c2lnbmF0dXJlX3Rva2Vu
+AUTH=Bearer aBcDefGhIjKlMnOpQrStUvWxYz1234567890
+DB=postgres://user:password@localhost:5432/appdb
+SECRET_KEY=supersecretvalue123
+
