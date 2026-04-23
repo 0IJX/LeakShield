@@ -1,0 +1,2 @@
+"""Detector components."""
+
