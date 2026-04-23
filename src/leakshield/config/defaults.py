@@ -8,7 +8,13 @@ DEFAULT_CONFIG: dict = {
     "scan": {
         "max_file_size_bytes": 1_000_000,
         "include_globs": [],
-        "exclude_globs": [],
+        "exclude_globs": [
+            "**/fixtures/**",
+            "**/samples/**",
+            "**/sample/**",
+            "**/testdata/**",
+            "**/__snapshots__/**",
+        ],
     },
     "detectors": {
         "regex_enabled": True,
@@ -34,4 +40,3 @@ DEFAULT_CONFIG: dict = {
         "fail_severity": "critical",
     },
 }
-

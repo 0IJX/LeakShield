@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import Iterable
 
 from leakshield.config.schema import LeakshieldConfig
 from leakshield.detectors.registry import DetectorRegistry
-from leakshield.discovery.file_walker import build_targets, discover_files
+from leakshield.discovery.file_walker import discover_files, iter_targets
 from leakshield.discovery.leakshield_ignore import LeakshieldIgnore
 from leakshield.git.diff_hunks import staged_changed_lines
 from leakshield.git.staged_content import read_staged_content
 from leakshield.git.staged_files import list_staged_files
-from leakshield.models import ScanMode, ScanResult, ScanSummary, ScanTarget
+from leakshield.models import Finding, ScanMode, ScanResult, ScanSummary, ScanTarget
 from leakshield.reporting.exit_policy import should_block
 from leakshield.services.pipeline import PipelineOptions, run_pipeline
 
@@ -23,7 +24,9 @@ class ScanService:
     def __init__(self, repo_root: Path, config: LeakshieldConfig) -> None:
         self.repo_root = repo_root
         self.config = config
-        self.registry = DetectorRegistry()
+        self.registry = DetectorRegistry(
+            detectors=None if config.detectors.regex_enabled else []
+        )
 
     def scan(self, *, staged: bool) -> ScanResult:
         return self.scan_staged() if staged else self.scan_full()
@@ -38,8 +41,7 @@ class ScanService:
             include_globs=self.config.scan.include_globs,
             exclude_globs=self.config.scan.exclude_globs,
         )
-        targets = build_targets(self.repo_root, files)
-        findings = self._scan_targets(targets)
+        findings, scanned_files = self._scan_targets(iter_targets(self.repo_root, files))
         blocked = should_block(findings, self.config.thresholds.block_severity)
         duration_ms = int((time.perf_counter() - start) * 1000)
         return ScanResult(
@@ -47,7 +49,7 @@ class ScanService:
             findings=findings,
             summary=ScanSummary.from_findings(
                 findings=findings,
-                scanned_files=len(targets),
+                scanned_files=scanned_files,
                 duration_ms=duration_ms,
                 blocked=blocked,
             ),
@@ -72,7 +74,7 @@ class ScanService:
                     is_staged=True,
                 )
             )
-        findings = self._scan_targets(targets)
+        findings, scanned_files = self._scan_targets(targets)
         blocked = should_block(findings, self.config.thresholds.block_severity)
         duration_ms = int((time.perf_counter() - start) * 1000)
         return ScanResult(
@@ -80,20 +82,23 @@ class ScanService:
             findings=findings,
             summary=ScanSummary.from_findings(
                 findings=findings,
-                scanned_files=len(targets),
+                scanned_files=scanned_files,
                 duration_ms=duration_ms,
                 blocked=blocked,
             ),
         )
 
-    def _scan_targets(self, targets: list[ScanTarget]) -> list:
+    def _scan_targets(self, targets: Iterable[ScanTarget]) -> tuple[list[Finding], int]:
         options = PipelineOptions(
             allowlist=self.config.allowlist,
             entropy_threshold=self.config.thresholds.entropy_threshold,
             min_confidence=self.config.thresholds.min_confidence,
+            enable_entropy=self.config.detectors.entropy_enabled,
         )
-        findings = []
+        findings: list[Finding] = []
+        scanned_files = 0
         for target in targets:
+            scanned_files += 1
             findings.extend(
                 run_pipeline(
                     target=target,
@@ -103,5 +108,4 @@ class ScanService:
                 )
             )
         findings.sort(key=lambda item: (item.path, item.line, item.column))
-        return findings
-
+        return findings, scanned_files

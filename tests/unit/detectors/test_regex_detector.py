@@ -28,3 +28,16 @@ def test_regex_detector_provides_line_numbers() -> None:
     assert github.line == 2
     assert github.column >= 1
 
+
+def test_regex_detector_ignores_short_bearer_values() -> None:
+    text = "Authorization: Bearer shorttoken\n"
+    detector = RegexDetector()
+    candidates = detector.scan(text, DetectorContext(path="headers.txt"))
+    assert all(candidate.secret_type != "bearer_token" for candidate in candidates)
+
+
+def test_regex_detector_requires_db_credentials() -> None:
+    text = "DATABASE_URL=postgres://localhost:5432/mydb\n"
+    detector = RegexDetector()
+    candidates = detector.scan(text, DetectorContext(path="app.env"))
+    assert all(candidate.secret_type != "db_connection" for candidate in candidates)

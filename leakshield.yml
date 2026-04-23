@@ -2,7 +2,12 @@ version: 1
 scan:
   max_file_size_bytes: 1000000
   include_globs: []
-  exclude_globs: []
+  exclude_globs:
+    - "**/fixtures/**"
+    - "**/samples/**"
+    - "**/sample/**"
+    - "**/testdata/**"
+    - "**/__snapshots__/**"
 detectors:
   regex_enabled: true
   entropy_enabled: true
@@ -21,4 +26,3 @@ output:
 hook:
   enabled: true
   fail_severity: critical
-

@@ -19,7 +19,6 @@ class HookInstallResult:
 
 def _render_hook(command: str) -> str:
     return (
-        "#!/bin/sh\n"
         f"{HOOK_BEGIN}\n"
         "echo \"LeakShield: scanning staged changes...\"\n"
         f"{command}\n"
@@ -32,16 +31,34 @@ def _render_hook(command: str) -> str:
     )
 
 
+def _replace_or_append_block(existing: str, block: str) -> str:
+    if not existing.strip():
+        return "#!/bin/sh\n\n" + block
+
+    if HOOK_BEGIN in existing and HOOK_END in existing:
+        start = existing.index(HOOK_BEGIN)
+        end = existing.index(HOOK_END) + len(HOOK_END)
+        trailing_newline = "\n" if not existing[end:].startswith("\n") else ""
+        return existing[:start] + block + trailing_newline + existing[end:].lstrip("\n")
+
+    normalized = existing
+    if not normalized.endswith("\n"):
+        normalized += "\n"
+    return normalized + "\n" + block
+
+
 def install_pre_commit_hook(repo_root: Path, command: str) -> HookInstallResult:
     hooks_dir = repo_root / ".git" / "hooks"
     hooks_dir.mkdir(parents=True, exist_ok=True)
     hook_path = hooks_dir / "pre-commit"
-    rendered = _render_hook(command)
-
+    block = _render_hook(command)
+    existing = ""
     if hook_path.exists():
-        current = hook_path.read_text(encoding="utf-8", errors="ignore")
-        if HOOK_BEGIN in current and HOOK_END in current and rendered == current:
-            return HookInstallResult(hook_path=hook_path, installed=False, message="Hook already installed.")
+        existing = hook_path.read_text(encoding="utf-8", errors="ignore")
+    rendered = _replace_or_append_block(existing, block)
+
+    if hook_path.exists() and existing == rendered:
+        return HookInstallResult(hook_path=hook_path, installed=False, message="Hook already installed.")
 
     hook_path.write_text(rendered, encoding="utf-8")
     try:
@@ -49,4 +66,3 @@ def install_pre_commit_hook(repo_root: Path, command: str) -> HookInstallResult:
     except OSError:
         pass
     return HookInstallResult(hook_path=hook_path, installed=True, message="Hook installed.")
-

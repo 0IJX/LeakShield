@@ -9,9 +9,17 @@ SCHEMA_VERSION = "1.0"
 
 
 def result_to_dict(result: ScanResult) -> dict:
+    ordered_findings = sorted(
+        result.findings,
+        key=lambda finding: (finding.path, finding.line, finding.column, finding.type),
+    )
+    exit_code = 2 if result.summary.blocked else 0
     return {
+        "tool": "leakshield",
         "schema_version": SCHEMA_VERSION,
         "mode": result.mode.value,
+        "blocked": result.summary.blocked,
+        "exit_code": exit_code,
         "summary": {
             "scanned_files": result.summary.scanned_files,
             "findings_total": result.summary.findings_total,
@@ -27,7 +35,7 @@ def result_to_dict(result: ScanResult) -> dict:
                 "id": finding.id,
                 "type": finding.type,
                 "severity": finding.severity.value,
-                "confidence": finding.confidence,
+                "confidence": round(finding.confidence, 3),
                 "path": finding.path,
                 "line": finding.line,
                 "column": finding.column,
@@ -35,7 +43,6 @@ def result_to_dict(result: ScanResult) -> dict:
                 "message": finding.message,
                 "remediation": finding.remediation,
             }
-            for finding in result.findings
+            for finding in ordered_findings
         ],
     }
-

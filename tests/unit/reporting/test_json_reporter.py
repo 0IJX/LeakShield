@@ -26,7 +26,9 @@ def test_json_report_schema_fields() -> None:
         summary=ScanSummary.from_findings(findings=[finding], scanned_files=1, duration_ms=12, blocked=False),
     )
     payload = json.loads(render_json(result))
+    assert payload["tool"] == "leakshield"
     assert payload["schema_version"] == "1.0"
+    assert payload["blocked"] is False
+    assert payload["exit_code"] == 0
     assert payload["summary"]["findings_total"] == 1
     assert payload["findings"][0]["masked_value"] == "sk-p****56"
-

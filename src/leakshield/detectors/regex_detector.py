@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import bisect
 import re
 from dataclasses import dataclass
 
@@ -18,15 +19,21 @@ class _CompiledPattern:
     value_group: int
 
 
-def _index_to_line_column(text: str, index: int) -> tuple[int, int]:
-    line = text.count("\n", 0, index) + 1
-    line_start = text.rfind("\n", 0, index)
-    column = index + 1 if line_start == -1 else index - line_start
-    return line, column
+def _line_starts(text: str) -> list[int]:
+    starts = [0]
+    for idx, char in enumerate(text):
+        if char == "\n":
+            starts.append(idx + 1)
+    return starts
 
 
-def _line_value(text: str, line_number: int) -> str:
-    lines = text.splitlines()
+def _index_to_line_column(index: int, starts: list[int]) -> tuple[int, int]:
+    line_idx = bisect.bisect_right(starts, index) - 1
+    line_start = starts[line_idx]
+    return line_idx + 1, index - line_start + 1
+
+
+def _line_value(lines: list[str], line_number: int) -> str:
     if line_number < 1 or line_number > len(lines):
         return ""
     return lines[line_number - 1]
@@ -52,11 +59,13 @@ class RegexDetector:
 
     def scan(self, text: str, context: DetectorContext) -> list[Candidate]:
         candidates: list[Candidate] = []
+        starts = _line_starts(text)
+        lines = text.splitlines()
         for pattern in self._patterns:
             for match in pattern.regex.finditer(text):
                 value = match.group(pattern.value_group)
                 start = match.start(pattern.value_group)
-                line, column = _index_to_line_column(text, start)
+                line, column = _index_to_line_column(start, starts)
                 candidates.append(
                     Candidate(
                         detector_id=pattern.id,
@@ -65,9 +74,8 @@ class RegexDetector:
                         line=line,
                         column=column,
                         value=value,
-                        context_line=_line_value(text, line),
+                        context_line=_line_value(lines, line),
                         metadata={"match_span": [match.start(), match.end()]},
                     )
                 )
         return candidates
-

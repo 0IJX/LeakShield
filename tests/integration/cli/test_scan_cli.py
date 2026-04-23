@@ -9,7 +9,8 @@ from leakshield.cli import app
 
 
 def test_scan_cli_blocks_on_critical(clean_repo: Path) -> None:
-    (clean_repo / "secrets.txt").write_text("AWS=AKIA1234567890ABCD12\n", encoding="utf-8")
+    raw_secret = "AKIA1234567890ABCD12"
+    (clean_repo / "secrets.txt").write_text(f"AWS={raw_secret}\n", encoding="utf-8")
 
     runner = CliRunner()
     previous = Path.cwd()
@@ -21,4 +22,4 @@ def test_scan_cli_blocks_on_critical(clean_repo: Path) -> None:
 
     assert result.exit_code == 2
     assert "Potential Secret Findings" in result.stdout
-
+    assert raw_secret not in result.stdout

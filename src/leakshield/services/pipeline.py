@@ -20,6 +20,7 @@ class PipelineOptions:
     allowlist: Allowlist
     entropy_threshold: float
     min_confidence: float
+    enable_entropy: bool = True
 
 
 def _finding_id(path: str, line: int, detector_id: str, masked_value: str) -> str:
@@ -34,10 +35,10 @@ def run_pipeline(
     options: PipelineOptions,
     ignore_path: bool = False,
 ) -> list[Finding]:
-    findings: list[Finding] = []
+    findings_by_key: dict[tuple[str, int, int, str], Finding] = {}
     candidates = detector_registry.scan_text(target.content, target.path)
     for candidate in candidates:
-        candidate.entropy = shannon_entropy(candidate.value)
+        candidate.entropy = shannon_entropy(candidate.value) if options.enable_entropy else None
         if target.changed_lines is not None and candidate.line not in target.changed_lines:
             continue
         if should_filter_candidate(candidate, ignore_path=ignore_path, allowlist=options.allowlist):
@@ -47,24 +48,25 @@ def run_pipeline(
             continue
         severity = map_severity(candidate.secret_type, confidence)
         masked_value = mask_secret(candidate.value)
-        findings.append(
-            Finding(
-                id=_finding_id(candidate.path, candidate.line, candidate.detector_id, masked_value),
-                type=candidate.secret_type,
-                severity=severity,
-                confidence=confidence,
-                path=candidate.path,
-                line=candidate.line,
-                column=candidate.column,
-                detector_id=candidate.detector_id,
-                masked_value=masked_value,
-                message=f"Potential {candidate.secret_type} detected.",
-                remediation=(
-                    "Remove the secret from source, replace with secure environment/config "
-                    "reference, and rotate if it was exposed."
-                ),
-                metadata=candidate.metadata.copy(),
-            )
+        finding = Finding(
+            id=_finding_id(candidate.path, candidate.line, candidate.detector_id, masked_value),
+            type=candidate.secret_type,
+            severity=severity,
+            confidence=confidence,
+            path=candidate.path,
+            line=candidate.line,
+            column=candidate.column,
+            detector_id=candidate.detector_id,
+            masked_value=masked_value,
+            message=f"Potential {candidate.secret_type} detected.",
+            remediation=(
+                "Remove the secret from source, replace with secure environment/config "
+                "reference, and rotate if it was exposed."
+            ),
+            metadata=candidate.metadata.copy(),
         )
-    return findings
-
+        dedupe_key = (finding.path, finding.line, finding.column, finding.masked_value)
+        existing = findings_by_key.get(dedupe_key)
+        if existing is None or finding.confidence > existing.confidence:
+            findings_by_key[dedupe_key] = finding
+    return list(findings_by_key.values())

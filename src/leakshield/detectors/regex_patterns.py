@@ -29,7 +29,7 @@ PATTERN_SPECS: tuple[PatternSpec, ...] = (
     PatternSpec(
         id="github_token",
         secret_type="github_token",
-        pattern=r"\bgh[pousr]_[A-Za-z0-9]{20,}\b",
+        pattern=r"\bgh[pousr]_[A-Za-z0-9]{30,}\b",
     ),
     PatternSpec(
         id="jwt_token",
@@ -39,7 +39,7 @@ PATTERN_SPECS: tuple[PatternSpec, ...] = (
     PatternSpec(
         id="bearer_token",
         secret_type="bearer_token",
-        pattern=r"(?i)\bBearer\s+([A-Za-z0-9\-._~+/]+=*)",
+        pattern=r"(?i)\bBearer\s+([A-Za-z0-9\-._~+/]{20,}={0,2})\b",
         value_group=1,
     ),
     PatternSpec(
@@ -55,7 +55,11 @@ PATTERN_SPECS: tuple[PatternSpec, ...] = (
     PatternSpec(
         id="db_connection_string",
         secret_type="db_connection",
-        pattern=r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|mssql)://[^\s'\"`]+",
+        pattern=(
+            r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|mssql)://"
+            r"[^/\s:@]+:[^@\s]+@"
+            r"[^\s'\"`]+"
+        ),
     ),
     PatternSpec(
         id="env_secret_assignment",
@@ -68,4 +72,3 @@ PATTERN_SPECS: tuple[PatternSpec, ...] = (
         value_group=1,
     ),
 )
-

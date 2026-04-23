@@ -36,11 +36,16 @@ def scan_command(
     if format is not None:
         cli_overrides = {"output": {"format": format.value}}
 
-    runtime_config = build_runtime_config(
-        repo_root=repo_root,
-        config_path=config,
-        cli_overrides=cli_overrides,
-    )
+    try:
+        runtime_config = build_runtime_config(
+            repo_root=repo_root,
+            config_path=config,
+            cli_overrides=cli_overrides,
+        )
+    except ValueError as exc:
+        typer.secho(f"Configuration error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
     effective_format = format or runtime_config.output.format
     service = ScanService(repo_root=repo_root, config=runtime_config)
     result = service.scan(staged=staged)
@@ -48,15 +53,22 @@ def scan_command(
     if effective_format == OutputFormat.JSON:
         typer.echo(render_json(result))
     else:
-        render_cli(result)
+        render_cli(result, console=Console(no_color=not runtime_config.output.color))
 
     raise typer.Exit(scan_exit_code(result.findings, runtime_config.thresholds.block_severity))
 
 
 @app.command("install-hook")
 def install_hook_command() -> None:
-    service = HookService(repo_root=Path.cwd())
-    result = service.install(command="leakshield scan --staged --format cli")
+    repo_root = Path.cwd()
+    try:
+        runtime_config = build_runtime_config(repo_root=repo_root)
+    except ValueError as exc:
+        typer.secho(f"Configuration error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    service = HookService(repo_root=repo_root)
+    command = f"leakshield scan --staged --format {runtime_config.output.format.value}"
+    result = service.install(command=command)
     if result.installed:
         typer.echo(f"Installed pre-commit hook at: {result.hook_path}")
     else:
@@ -85,4 +97,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

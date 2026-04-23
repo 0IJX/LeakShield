@@ -1,4 +1,8 @@
 # LeakShield local ignore patterns
-# Example:
-# secrets/example.txt
-
+# Common noisy test-data locations
+tests/fixtures/*
+**/fixtures/*
+**/samples/*
+**/sample/*
+**/testdata/*
+**/__snapshots__/*

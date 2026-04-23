@@ -56,8 +56,7 @@ def discover_files(
     return results
 
 
-def build_targets(repo_root: Path, files: list[Path]) -> list[ScanTarget]:
-    targets: list[ScanTarget] = []
+def iter_targets(repo_root: Path, files: list[Path]):
     for file_path in files:
         try:
             text = file_path.read_text(encoding="utf-8")
@@ -66,6 +65,8 @@ def build_targets(repo_root: Path, files: list[Path]) -> list[ScanTarget]:
         except OSError:
             continue
         rel = file_path.relative_to(repo_root).as_posix()
-        targets.append(ScanTarget(path=rel, content=text))
-    return targets
+        yield ScanTarget(path=rel, content=text)
 
+
+def build_targets(repo_root: Path, files: list[Path]) -> list[ScanTarget]:
+    return list(iter_targets(repo_root, files))
