@@ -68,6 +68,7 @@ All findings are masked in both CLI and JSON output.
   - `leakshield install-hook`
   - `leakshield doctor`
 - JSON output for automation: `--format json`
+- Test/fixture noise handling: findings in `tests/` and fixture-style paths are summarized as `Test/Fixture Findings`, down-weighted by default (`lower_confidence`), and fully expanded with higher `output.verbosity` when needed.
 - Config and ignore support:
   - `leakshield.yml`
   - `.leakshieldignore`
