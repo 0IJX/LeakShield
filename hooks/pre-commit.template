@@ -1,0 +1,5 @@
+#!/bin/sh
+# LeakShield pre-commit hook template
+leakshield scan --staged --format cli
+exit $?
+
