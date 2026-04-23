@@ -23,3 +23,32 @@ def test_precommit_blocks_commit_on_critical(clean_repo: Path, env_with_src: dic
         env=env_with_src,
     )
     assert commit.returncode != 0
+
+
+def test_precommit_blocks_commit_on_staged_openai_key_env_file(
+    clean_repo: Path, env_with_src: dict[str, str]
+) -> None:
+    service = HookService(clean_repo)
+    service.install(command=f"\"{sys.executable}\" -m leakshield.cli scan --staged --format cli")
+
+    (clean_repo / "leakshield_test.env").write_text(
+        'OPENAI_API_KEY="sk-proj-test1234567890abcdef"\n',
+        encoding="utf-8",
+    )
+    subprocess.run(
+        ["git", "add", "leakshield_test.env"],
+        cwd=clean_repo,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    commit = subprocess.run(
+        ["git", "commit", "-m", "should fail due to staged openai key"],
+        cwd=clean_repo,
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env_with_src,
+    )
+    assert commit.returncode != 0

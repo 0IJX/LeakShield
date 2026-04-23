@@ -70,7 +70,9 @@ class ScanService:
                 ScanTarget(
                     path=relative_path.replace("\\", "/"),
                     content=content,
-                    changed_lines=lines if lines else set(),
+                    # If diff hunk parsing yields no line scope, fall back to full
+                    # staged content scan so staged mode still detects clear leaks.
+                    changed_lines=lines if lines else None,
                     is_staged=True,
                 )
             )
